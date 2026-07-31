@@ -1,188 +1,42 @@
 "use strict";
-
 const cfg=window.MONITOR_CONFIG;
 const {createClient}=window.supabase;
 const client=createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
-const $=(s)=>document.querySelector(s);
-let session=null,data=null;
-
+const $=s=>document.querySelector(s);
+let session=null,data=null,testTimer=null;
 const cloneDefault=()=>JSON.parse(JSON.stringify(cfg.DEFAULT_DATA));
-const esc=(v)=>String(v??"").replace(/[&"<>'`]/g,c=>({"&":"&amp;",'"':"&quot;","<":"&lt;",">":"&gt;","'":"&#39;","`":"&#96;"}[c]));
+const esc=v=>String(v??"").replace(/[&"<>'`]/g,c=>({"&":"&amp;",'"':"&quot;","<":"&lt;",">":"&gt;","'":"&#39;","`":"&#96;"}[c]));
+function toast(text,type="success",duration=4200){const c=$("#toastContainer"),el=document.createElement("div");el.className=`toast toast-${type}`;el.innerHTML=`<span class="toast-icon">${type==="success"?"✓":"!"}</span><span>${esc(text)}</span>`;c.appendChild(el);requestAnimationFrame(()=>el.classList.add("show"));setTimeout(()=>{el.classList.remove("show");setTimeout(()=>el.remove(),250)},duration)}
 function message(text,error=false){const el=$("#adminMessage");el.textContent=text;el.classList.toggle("error",error)}
-async function ensureAdmin(){
-  const {data:row,error}=await client.from("admin_users").select("user_id").eq("user_id",session.user.id).maybeSingle();
-  if(error||!row)throw new Error("Esta conta não está autorizada no painel.");
-}
-async function loadPublicData(){
-  const {data:blob,error}=await client.storage.from(cfg.PUBLIC_BUCKET).download(cfg.PUBLIC_FILE);
-  if(error||!blob)return cloneDefault();
-  const parsed=JSON.parse(await blob.text());
-  return {...cloneDefault(),...parsed};
-}
-async function uploadPublicData(next){
-  next.updatedAt=new Date().toISOString();
-  const body=new Blob([JSON.stringify(next,null,2)],{type:"application/json;charset=utf-8"});
-  const {error}=await client.storage.from(cfg.PUBLIC_BUCKET).upload(cfg.PUBLIC_FILE,body,{upsert:true,contentType:"application/json",cacheControl:"60"});
-  if(error)throw error;
-}
-function showDashboard(){
-  $("#loginPanel").hidden=true;$("#dashboard").hidden=false;$("#sessionEmail").textContent=session.user.email||"Administrador";
-}
-function render(){
-  $("#siteTitle").value=data.siteTitle||"";
-  $("#siteSubtitle").value=data.siteSubtitle||"";
-  $("#headerAlertText").value=data.headerAlertText||"";
-  $("#instagramUrl").value=data.instagramUrl||"";
-  $("#xUrl").value=data.xUrl||"";
-  $("#telegramUrl").value=data.telegramUrl||"";
-  $("#coverImage").value=data.coverImage||"";
-  $("#monitorEnabled").checked=Boolean(data.monitorEnabled);
-  $("#checkIntervalSeconds").value=data.checkIntervalSeconds||60;
-  $("#manualNotice").value=data.manualNotice||"";
-  data.testAlert=data.testAlert||{active:false,showId:"",status:"available",label:"Disponível",details:"Alerta de teste temporário.",startedAt:null};
-  $("#footerTextInput").value=data.footerText||"";
-  $("#coverPreview").hidden=!data.coverImage;
-  $("#coverPreview").src=data.coverImage||"";
-
-  $("#showsEditor").innerHTML=(data.shows||[]).map((show,i)=>`
-    <div class="show-editor" data-show="${i}">
-      <div class="editor-head"><strong>Show ${i+1}</strong><button class="admin-button danger remove-show" type="button">Excluir</button></div>
-      <div class="form-grid">
-        <label>Dia<input class="show-date" value="${esc(show.date)}"></label>
-        <label>Mês<input class="show-month" value="${esc(show.month)}"></label>
-        <label>Cidade<input class="show-subtitle" value="${esc(show.subtitle)}"></label>
-        <label>URL oficial<input class="show-url" value="${esc(show.url)}"></label>
-        <label class="checkbox"><input class="show-enabled" type="checkbox" ${show.enabled!==false?"checked":""}>Monitorar</label>
-      </div>
-    </div>`).join("");
-
-  $("#infoEditor").innerHTML=(data.infoCards||[]).map((card,i)=>`
-    <div class="info-editor" data-info="${i}">
-      <div class="editor-head"><strong>Card ${i+1}</strong><button class="admin-button danger remove-info" type="button">Excluir</button></div>
-      <div class="form-grid">
-        <label>Título<input class="info-title" value="${esc(card.title)}"></label>
-        <label>Texto do link<input class="info-link-text" value="${esc(card.linkText)}"></label>
-        <label class="full">Descrição<textarea class="info-text">${String(card.text??"")}</textarea></label>
-        <label class="full">URL do link<input class="info-link-url" value="${esc(card.linkUrl)}"></label>
-      </div>
-    </div>`).join("");
-
-  $("#testShowSelect").innerHTML=(data.shows||[]).map(s=>`<option value="${esc(s.id)}" ${data.testAlert.showId===s.id?"selected":""}>${esc(s.date)} ${esc(s.month)}</option>`).join("");
-  $("#testStatusSelect").value=data.testAlert.status||"available";
-  $("#stateList").innerHTML=(data.shows||[]).map(s=>`<div class="state-item"><strong>${esc(s.date)} ${esc(s.month)}</strong><br>${esc(s.label||"Aguardando")}<br><span class="muted">${esc(s.details||"")}</span></div>`).join("");
-}
-function collect(){
-  data.siteTitle=$("#siteTitle").value.trim();
-  data.siteSubtitle=$("#siteSubtitle").value.trim();
-  data.headerAlertText=$("#headerAlertText").value.trim();
-  data.instagramUrl=$("#instagramUrl").value.trim();
-  data.xUrl=$("#xUrl").value.trim();
-  data.telegramUrl=$("#telegramUrl").value.trim();
-  data.coverImage=$("#coverImage").value.trim();
-  data.monitorEnabled=$("#monitorEnabled").checked;
-  data.checkIntervalSeconds=Math.max(60,Number($("#checkIntervalSeconds").value||60));
-  data.manualNotice=$("#manualNotice").value.trim();
-  data.footerText=$("#footerTextInput").value.trim();
-  data.shows=[...document.querySelectorAll("[data-show]")].map((el,i)=>{
-    const old=data.shows[i]||{};
-    return {
-      id:old.id||`show-${Date.now()}-${i}`,
-      date:el.querySelector(".show-date").value.trim(),
-      month:el.querySelector(".show-month").value.trim(),
-      subtitle:el.querySelector(".show-subtitle").value.trim(),
-      url:el.querySelector(".show-url").value.trim(),
-      enabled:el.querySelector(".show-enabled").checked,
-      status:old.status||"sold_out",
-      label:old.label||"Esgotado",
-      details:old.details||"Nenhuma atualização confirmada no site oficial.",
-      statusChangedAt:old.statusChangedAt||null
-    };
-  });
-  data.infoCards=[...document.querySelectorAll("[data-info]")].map(el=>({
-    title:el.querySelector(".info-title").value.trim(),
-    text:el.querySelector(".info-text").value.trim(),
-    linkText:el.querySelector(".info-link-text").value.trim(),
-    linkUrl:el.querySelector(".info-link-url").value.trim()
-  }));
-}
+function setBusy(button,busy,label="Salvando..."){button.disabled=busy;const l=button.querySelector(".button-label"),s=button.querySelector(".button-spinner");if(l){button.dataset.originalLabel||=l.textContent;l.textContent=busy?label:button.dataset.originalLabel}if(s)s.hidden=!busy}
+function confirmSaved(text="Alterações salvas e publicadas"){const b=$("#saveStatus");$("#saveStatusText").textContent=text;b.hidden=false;b.classList.remove("pulse");void b.offsetWidth;b.classList.add("pulse");setTimeout(()=>b.hidden=true,6000)}
+async function ensureAdmin(){const {data:r,error}=await client.from("admin_users").select("user_id").eq("user_id",session.user.id).maybeSingle();if(error||!r)throw new Error("Esta conta não está autorizada no painel.")}
+async function loadPublicData(){const {data:b,error}=await client.storage.from(cfg.PUBLIC_BUCKET).download(cfg.PUBLIC_FILE);if(error||!b)return cloneDefault();return {...cloneDefault(),...JSON.parse(await b.text())}}
+async function uploadPublicData(next){next.updatedAt=new Date().toISOString();const body=new Blob([JSON.stringify(next,null,2)],{type:"application/json;charset=utf-8"});const {error}=await client.storage.from(cfg.PUBLIC_BUCKET).upload(cfg.PUBLIC_FILE,body,{upsert:true,contentType:"application/json",cacheControl:"0"});if(error)throw error;await new Promise(r=>setTimeout(r,500));const check=await loadPublicData();if(check.updatedAt!==next.updatedAt)throw new Error("O Supabase não confirmou a gravação. Tente novamente.");return check}
+function showDashboard(){$("#loginPanel").hidden=true;$("#dashboard").hidden=false;$("#sessionEmail").textContent=session.user.email||"Administrador"}
+function testObj(){return data.testAlert||{active:false,showId:"",status:"available",label:"Disponível",details:"Alerta de teste temporário.",startedAt:null,expiresAt:null}}
+function testActive(t=testObj()){return !!t.active&&(!t.expiresAt||new Date(t.expiresAt).getTime()>Date.now())}
+function updateTestCard(){const t=testObj(),active=testActive(t),card=$("#testControlCard"),badge=$("#testCountdownBadge");card.classList.toggle("active",active);if(!active){$("#testControlTitle").textContent="Nenhum teste ativo";$("#testControlDescription").textContent="O teste não altera os status reais.";badge.hidden=true;return}const show=(data.shows||[]).find(s=>s.id===t.showId);$("#testControlTitle").textContent=`Teste ativo: ${show?`${show.date} ${show.month||""}`:"show selecionado"}`;$("#testControlDescription").textContent=`${t.label}. Este teste será removido automaticamente.`;const left=Math.max(0,Math.ceil((new Date(t.expiresAt).getTime()-Date.now())/1000));badge.textContent=`${left}s`;badge.hidden=false;if(left<=0)clearTest(true).catch(console.error)}
+function startTestTimer(){if(testTimer)clearInterval(testTimer);updateTestCard();testTimer=setInterval(updateTestCard,1000)}
+function render(){data.testAlert=testObj();$("#siteTitle").value=data.siteTitle||"";$("#siteSubtitle").value=data.siteSubtitle||"";$("#headerAlertText").value=data.headerAlertText||"";$("#instagramUrl").value=data.instagramUrl||"";$("#xUrl").value=data.xUrl||"";$("#telegramUrl").value=data.telegramUrl||"";$("#coverImage").value=data.coverImage||"";$("#monitorEnabled").checked=!!data.monitorEnabled;$("#checkIntervalSeconds").value=data.checkIntervalSeconds||60;$("#manualNotice").value=data.manualNotice||"";$("#footerTextInput").value=data.footerText||"";$("#coverPreview").hidden=!data.coverImage;$("#coverPreview").src=data.coverImage||"";
+$("#showsEditor").innerHTML=(data.shows||[]).map((s,i)=>`<div class="show-editor" data-show="${i}"><div class="editor-head"><strong>Show ${i+1}</strong><button class="admin-button danger remove-show" type="button">Excluir</button></div><div class="form-grid"><label>Dia<input class="show-date" value="${esc(s.date)}"></label><label>Mês<input class="show-month" value="${esc(s.month)}"></label><label>Cidade<input class="show-subtitle" value="${esc(s.subtitle)}"></label><label class="full">URL oficial<input class="show-url" value="${esc(s.url)}"></label><label class="checkbox"><input class="show-enabled" type="checkbox" ${s.enabled!==false?"checked":""}>Monitorar</label></div></div>`).join("");
+$("#infoEditor").innerHTML=(data.infoCards||[]).map((c,i)=>`<div class="info-editor" data-info="${i}"><div class="editor-head"><strong>Card ${i+1}</strong><button class="admin-button danger remove-info" type="button">Excluir</button></div><div class="form-grid"><label>Título<input class="info-title" value="${esc(c.title)}"></label><label>Texto do link<input class="info-link-text" value="${esc(c.linkText)}"></label><label class="full">Descrição<textarea class="info-text">${esc(c.text)}</textarea></label><label class="full">URL do link<input class="info-link-url" value="${esc(c.linkUrl)}"></label></div></div>`).join("");
+$("#testShowSelect").innerHTML=(data.shows||[]).map(s=>`<option value="${esc(s.id)}" ${data.testAlert.showId===s.id?"selected":""}>${esc(s.date)} ${esc(s.month||"")} ${esc(s.subtitle||"")}</option>`).join("");$("#testStatusSelect").value=data.testAlert.status||"available";$("#stateList").innerHTML=(data.shows||[]).map(s=>`<div class="state-item"><strong>${esc(s.date)} ${esc(s.month||"")}</strong><br>${esc(s.label||"Aguardando")}<br><span class="muted">${esc(s.details||"")}</span></div>`).join("");startTestTimer()}
+function collect(){data.siteTitle=$("#siteTitle").value.trim();data.siteSubtitle=$("#siteSubtitle").value.trim();data.headerAlertText=$("#headerAlertText").value.trim();data.instagramUrl=$("#instagramUrl").value.trim();data.xUrl=$("#xUrl").value.trim();data.telegramUrl=$("#telegramUrl").value.trim();data.coverImage=$("#coverImage").value.trim();data.monitorEnabled=$("#monitorEnabled").checked;data.checkIntervalSeconds=Math.max(60,Number($("#checkIntervalSeconds").value||60));data.manualNotice=$("#manualNotice").value.trim();data.footerText=$("#footerTextInput").value.trim();data.shows=[...document.querySelectorAll("[data-show]")].map((el,i)=>{const old=data.shows[i]||{};return{id:old.id||`show-${Date.now()}-${i}`,date:el.querySelector(".show-date").value.trim(),month:el.querySelector(".show-month").value.trim(),subtitle:el.querySelector(".show-subtitle").value.trim(),url:el.querySelector(".show-url").value.trim(),enabled:el.querySelector(".show-enabled").checked,status:old.status||"sold_out",label:old.label||"Esgotado",details:old.details||"Nenhuma atualização confirmada no site oficial.",statusChangedAt:old.statusChangedAt||null}});data.infoCards=[...document.querySelectorAll("[data-info]")].map(el=>({title:el.querySelector(".info-title").value.trim(),text:el.querySelector(".info-text").value.trim(),linkText:el.querySelector(".info-link-text").value.trim(),linkUrl:el.querySelector(".info-link-url").value.trim()}))}
 async function openDashboard(){await ensureAdmin();data=await loadPublicData();showDashboard();render()}
-async function uploadCover(){
-  const file=$("#coverFile").files?.[0];
-  if(!file)throw new Error("Selecione uma imagem.");
-  if(!file.type.startsWith("image/"))throw new Error("O arquivo precisa ser uma imagem.");
-  if(file.size>8*1024*1024)throw new Error("A imagem deve ter no máximo 8 MB.");
-  const ext=(file.name.split(".").pop()||"jpg").toLowerCase();
-  const path=`covers/capa-${Date.now()}.${ext}`;
-  const {error}=await client.storage.from(cfg.MEDIA_BUCKET).upload(path,file,{upsert:true,contentType:file.type,cacheControl:"3600"});
-  if(error)throw error;
-  const {data:urlData}=client.storage.from(cfg.MEDIA_BUCKET).getPublicUrl(path);
-  $("#coverImage").value=urlData.publicUrl;
-  $("#coverPreview").src=urlData.publicUrl;
-  $("#coverPreview").hidden=false;
-  data.coverImage=urlData.publicUrl;
-}
-async function invokeMonitor(){
-  const {data:result,error}=await client.functions.invoke("ticket-monitor",{body:{source:"admin"}});
-  if(error)throw error;return result;
-}
-
-$("#loginButton").addEventListener("click",async()=>{
-  $("#loginMessage").textContent="";
-  try{
-    const {data:auth,error}=await client.auth.signInWithPassword({email:$("#email").value.trim(),password:$("#password").value});
-    if(error)throw error;session=auth.session;await openDashboard();
-  }catch(e){$("#loginMessage").textContent=e.message;$("#loginMessage").classList.add("error")}
-});
+async function uploadCover(){const f=$("#coverFile").files?.[0];if(!f)throw new Error("Selecione uma imagem.");if(!f.type.startsWith("image/"))throw new Error("O arquivo precisa ser uma imagem.");if(f.size>8*1024*1024)throw new Error("A imagem deve ter no máximo 8 MB.");const ext=(f.name.split(".").pop()||"jpg").toLowerCase(),path=`covers/capa-${Date.now()}.${ext}`;const {error}=await client.storage.from(cfg.MEDIA_BUCKET).upload(path,f,{upsert:false,contentType:f.type,cacheControl:"3600"});if(error)throw error;const {data:u}=client.storage.from(cfg.MEDIA_BUCKET).getPublicUrl(path);$("#coverImage").value=u.publicUrl;data.coverImage=u.publicUrl;$("#coverPreview").src=u.publicUrl;$("#coverPreview").hidden=false}
+async function invokeMonitor(){const {data:r,error}=await client.functions.invoke("ticket-monitor",{body:{source:"admin"}});if(error)throw error;return r}
+async function publishTest(){collect();if(!data.shows.length)throw new Error("Cadastre pelo menos um show.");const showId=$("#testShowSelect").value||data.shows[0].id,status=$("#testStatusSelect").value==="sold_out"?"sold_out":"available",duration=Math.max(30,Number($("#testDurationSelect").value||60)),now=Date.now();data.testAlert={active:true,showId,status,label:status==="available"?"Disponível":"Esgotado",details:"MODO DE TESTE — este alerta não representa disponibilidade real.",startedAt:new Date(now).toISOString(),expiresAt:new Date(now+duration*1000).toISOString()};data=await uploadPublicData(data);try{const c=new BroadcastChannel("bts-monitor");c.postMessage({type:"test-updated"});c.close()}catch{}render()}
+async function clearTest(auto=false){data.testAlert={active:false,showId:"",status:"available",label:"Disponível",details:"Alerta de teste temporário.",startedAt:null,expiresAt:null};data=await uploadPublicData(data);try{const c=new BroadcastChannel("bts-monitor");c.postMessage({type:"test-cleared"});c.close()}catch{}render();if(!auto){toast("Teste removido. O site voltou aos status reais.");confirmSaved("Teste limpo com sucesso")}}
+$("#loginButton").addEventListener("click",async()=>{try{const {data:a,error}=await client.auth.signInWithPassword({email:$("#email").value.trim(),password:$("#password").value});if(error)throw error;session=a.session;await openDashboard()}catch(e){$("#loginMessage").textContent=e.message;$("#loginMessage").classList.add("error")}});
 $("#logoutButton").addEventListener("click",async()=>{await client.auth.signOut();location.reload()});
-$("#uploadCoverButton").addEventListener("click",async()=>{
-  const msg=$("#uploadCoverMessage");msg.textContent="Enviando...";
-  try{await uploadCover();msg.textContent="Imagem enviada. Agora clique em salvar."}catch(e){msg.textContent=e.message;msg.classList.add("error")}
-});
+$("#uploadCoverButton").addEventListener("click",async()=>{const b=$("#uploadCoverButton"),m=$("#uploadCoverMessage");b.disabled=true;m.textContent="Enviando...";try{await uploadCover();m.textContent="Imagem enviada. Clique em salvar.";toast("Imagem enviada para o Supabase.")}catch(e){m.textContent=e.message;m.classList.add("error");toast(e.message,"error")}finally{b.disabled=false}});
 $("#addShow").addEventListener("click",()=>{data.shows.push({id:`show-${Date.now()}`,date:"NOVO",month:"MÊS",subtitle:"SÃO PAULO",url:"https://www.ticketmaster.com.br/",enabled:true,status:"sold_out",label:"Esgotado",details:"Nenhuma atualização confirmada no site oficial.",statusChangedAt:null});render()});
 $("#addInfo").addEventListener("click",()=>{data.infoCards.push({title:"NOVO CARD",text:"Descrição",linkText:"",linkUrl:""});render()});
 $("#showsEditor").addEventListener("click",e=>{const b=e.target.closest(".remove-show");if(!b)return;data.shows.splice(Number(b.closest("[data-show]").dataset.show),1);render()});
 $("#infoEditor").addEventListener("click",e=>{const b=e.target.closest(".remove-info");if(!b)return;data.infoCards.splice(Number(b.closest("[data-info]").dataset.info),1);render()});
-$("#saveButton").addEventListener("click",async()=>{try{collect();message("Publicando...");await uploadPublicData(data);message("Alterações publicadas.");data=await loadPublicData();render()}catch(e){message(e.message,true)}});
-$("#checkNow").addEventListener("click",async()=>{try{message("Verificando...");const r=await invokeMonitor();message(r?.message||"Concluído.");data=await loadPublicData();render()}catch(e){message(e.message,true)}});
-$("#testAlert").addEventListener("click",async()=>{
-  try{
-    collect();
-    if(!data.shows.length)throw new Error("Cadastre um show.");
-    const showId=$("#testShowSelect").value||data.shows[0].id;
-    const status=$("#testStatusSelect").value==="sold_out"?"sold_out":"available";
-    data.testAlert={
-      active:true,
-      showId,
-      status,
-      label:status==="available"?"Disponível":"Esgotado",
-      details:"Alerta de teste temporário publicado pelo painel.",
-      startedAt:new Date().toISOString()
-    };
-    await uploadPublicData(data);
-    message("Teste temporário publicado. Os status reais não foram alterados.");
-    data=await loadPublicData();
-    render();
-  }catch(e){message(e.message,true)}
-});
-
-$("#clearTestAlert").addEventListener("click",async()=>{
-  try{
-    collect();
-    data.testAlert={
-      active:false,
-      showId:"",
-      status:"available",
-      label:"Disponível",
-      details:"Alerta de teste temporário.",
-      startedAt:null
-    };
-    data.manualNotice="";
-    $("#manualNotice").value="";
-    await uploadPublicData(data);
-    message("Teste removido. O site voltou aos status reais.");
-    data=await loadPublicData();
-    render();
-  }catch(e){message(e.message,true)}
-});
-
-client.auth.getSession().then(async({data:auth})=>{if(!auth.session)return;session=auth.session;try{await openDashboard()}catch(e){await client.auth.signOut();$("#loginMessage").textContent=e.message;$("#loginMessage").classList.add("error")}});
+$("#saveButton").addEventListener("click",async()=>{const b=$("#saveButton");setBusy(b,true);try{collect();data=await uploadPublicData(data);render();confirmSaved();toast("Alterações salvas e publicadas com sucesso.")}catch(e){message(e.message,true);toast(e.message,"error",6500)}finally{setBusy(b,false)}});
+$("#checkNow").addEventListener("click",async()=>{const b=$("#checkNow"),o=b.textContent;b.disabled=true;b.textContent="Verificando...";try{const r=await invokeMonitor();toast(r?.message||"Verificação concluída.");data=await loadPublicData();render()}catch(e){toast(e.message,"error")}finally{b.disabled=false;b.textContent=o}});
+$("#testAlert").addEventListener("click",async()=>{const b=$("#testAlert"),o=b.textContent;b.disabled=true;b.textContent="Publicando teste...";try{await publishTest();toast("Teste publicado. Ele será removido automaticamente.");confirmSaved("Teste temporário ativo")}catch(e){toast(e.message,"error")}finally{b.disabled=false;b.textContent=o}});
+$("#clearTestAlert").addEventListener("click",async()=>{const b=$("#clearTestAlert"),o=b.textContent;b.disabled=true;b.textContent="Limpando...";try{await clearTest(false)}catch(e){toast(e.message,"error")}finally{b.disabled=false;b.textContent=o}});
+client.auth.getSession().then(async({data:a})=>{if(!a.session)return;session=a.session;try{await openDashboard()}catch(e){await client.auth.signOut();$("#loginMessage").textContent=e.message;$("#loginMessage").classList.add("error")}});

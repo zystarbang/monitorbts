@@ -5,6 +5,7 @@ window.MONITOR_CONFIG = {
   MEDIA_BUCKET: "monitor-media",
   PUBLIC_FILE: "data.json",
   REFRESH_SECONDS: 60,
+  TEST_REFRESH_SECONDS: 5,
   DEFAULT_DATA: {
   "version": 2,
   "updatedAt": null,
@@ -107,7 +108,8 @@ window.MONITOR_CONFIG = {
     "status": "available",
     "label": "Disponível",
     "details": "Alerta de teste temporário.",
-    "startedAt": null
+    "startedAt": null,
+    "expiresAt": null
   }
 }
 };
