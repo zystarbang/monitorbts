@@ -39,6 +39,7 @@ function render(){
   $("#monitorEnabled").checked=Boolean(data.monitorEnabled);
   $("#checkIntervalSeconds").value=data.checkIntervalSeconds||60;
   $("#manualNotice").value=data.manualNotice||"";
+  data.testAlert=data.testAlert||{active:false,showId:"",status:"available",label:"Disponível",details:"Alerta de teste temporário.",startedAt:null};
   $("#footerTextInput").value=data.footerText||"";
   $("#coverPreview").hidden=!data.coverImage;
   $("#coverPreview").src=data.coverImage||"";
@@ -66,6 +67,8 @@ function render(){
       </div>
     </div>`).join("");
 
+  $("#testShowSelect").innerHTML=(data.shows||[]).map(s=>`<option value="${esc(s.id)}" ${data.testAlert.showId===s.id?"selected":""}>${esc(s.date)} ${esc(s.month)}</option>`).join("");
+  $("#testStatusSelect").value=data.testAlert.status||"available";
   $("#stateList").innerHTML=(data.shows||[]).map(s=>`<div class="state-item"><strong>${esc(s.date)} ${esc(s.month)}</strong><br>${esc(s.label||"Aguardando")}<br><span class="muted">${esc(s.details||"")}</span></div>`).join("");
 }
 function collect(){
@@ -141,6 +144,45 @@ $("#showsEditor").addEventListener("click",e=>{const b=e.target.closest(".remove
 $("#infoEditor").addEventListener("click",e=>{const b=e.target.closest(".remove-info");if(!b)return;data.infoCards.splice(Number(b.closest("[data-info]").dataset.info),1);render()});
 $("#saveButton").addEventListener("click",async()=>{try{collect();message("Publicando...");await uploadPublicData(data);message("Alterações publicadas.");data=await loadPublicData();render()}catch(e){message(e.message,true)}});
 $("#checkNow").addEventListener("click",async()=>{try{message("Verificando...");const r=await invokeMonitor();message(r?.message||"Concluído.");data=await loadPublicData();render()}catch(e){message(e.message,true)}});
-$("#testAlert").addEventListener("click",async()=>{try{collect();if(!data.shows.length)throw new Error("Cadastre um show.");Object.assign(data.shows[0],{status:"available",label:"Disponível",details:"Alerta de teste publicado pelo painel.",statusChangedAt:new Date().toISOString()});await uploadPublicData(data);message("Alerta de teste publicado.");render()}catch(e){message(e.message,true)}});
+$("#testAlert").addEventListener("click",async()=>{
+  try{
+    collect();
+    if(!data.shows.length)throw new Error("Cadastre um show.");
+    const showId=$("#testShowSelect").value||data.shows[0].id;
+    const status=$("#testStatusSelect").value==="sold_out"?"sold_out":"available";
+    data.testAlert={
+      active:true,
+      showId,
+      status,
+      label:status==="available"?"Disponível":"Esgotado",
+      details:"Alerta de teste temporário publicado pelo painel.",
+      startedAt:new Date().toISOString()
+    };
+    await uploadPublicData(data);
+    message("Teste temporário publicado. Os status reais não foram alterados.");
+    data=await loadPublicData();
+    render();
+  }catch(e){message(e.message,true)}
+});
+
+$("#clearTestAlert").addEventListener("click",async()=>{
+  try{
+    collect();
+    data.testAlert={
+      active:false,
+      showId:"",
+      status:"available",
+      label:"Disponível",
+      details:"Alerta de teste temporário.",
+      startedAt:null
+    };
+    data.manualNotice="";
+    $("#manualNotice").value="";
+    await uploadPublicData(data);
+    message("Teste removido. O site voltou aos status reais.");
+    data=await loadPublicData();
+    render();
+  }catch(e){message(e.message,true)}
+});
 
 client.auth.getSession().then(async({data:auth})=>{if(!auth.session)return;session=auth.session;try{await openDashboard()}catch(e){await client.auth.signOut();$("#loginMessage").textContent=e.message;$("#loginMessage").classList.add("error")}});

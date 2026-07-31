@@ -100,6 +100,14 @@ window.MONITOR_CONFIG = {
       "linkText": "",
       "linkUrl": ""
     }
-  ]
+  ],
+  "testAlert": {
+    "active": false,
+    "showId": "",
+    "status": "available",
+    "label": "Disponível",
+    "details": "Alerta de teste temporário.",
+    "startedAt": null
+  }
 }
 };

@@ -76,7 +76,17 @@ function render(data, firstLoad=false) {
   $("#manualNoticeSection").hidden = !notice;
   $("#manualNotice").textContent = notice;
 
-  const shows = safe.shows.filter(s => s.enabled !== false);
+  const testAlert = safe.testAlert && safe.testAlert.active ? safe.testAlert : null;
+  const shows = safe.shows
+    .filter(s => s.enabled !== false)
+    .map(s => testAlert && testAlert.showId === s.id ? {
+      ...s,
+      status: testAlert.status || "available",
+      label: testAlert.label || "Disponível",
+      details: testAlert.details || "Alerta de teste temporário.",
+      statusChangedAt: testAlert.startedAt || new Date().toISOString(),
+      __testMode: true
+    } : s);
   $("#showsGrid").innerHTML = shows.map(show => `
     <article class="show-card status-${escapeHtml(show.status || "unknown")}">
       <div class="show-date-block">
@@ -87,7 +97,7 @@ function render(data, firstLoad=false) {
         </div>
       </div>
 
-      <p class="status-label">STATUS DO INGRESSO</p>
+      <p class="status-label">${show.__testMode ? "MODO DE TESTE — STATUS NÃO REAL" : "STATUS DO INGRESSO"}</p>
       <div class="status-bar">
         <span class="status-dot"></span>
         <span class="status-text">${escapeHtml(show.label || "Aguardando")}</span>
