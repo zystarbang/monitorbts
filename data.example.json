@@ -1,0 +1,97 @@
+{
+  "version": 2,
+  "updatedAt": null,
+  "siteTitle": "MONITOR TICKET BTS",
+  "siteSubtitle": "BTS WORLD TOUR ARIRANG - SÃO PAULO",
+  "coverImage": "",
+  "headerAlertText": "Ativar alerta",
+  "instagramUrl": "https://instagram.com/",
+  "xUrl": "",
+  "telegramUrl": "https://t.me/monitorticketmbts",
+  "monitorEnabled": true,
+  "checkIntervalSeconds": 60,
+  "manualNotice": "",
+  "footerText": "BTS Ticket Monitor Brasil",
+  "shows": [
+    {
+      "id": "show-28",
+      "date": "28",
+      "month": "OUTUBRO",
+      "subtitle": "SÃO PAULO",
+      "url": "https://www.ticketmaster.com.br/",
+      "enabled": true,
+      "status": "sold_out",
+      "label": "Esgotado",
+      "details": "Nenhuma atualização confirmada no site oficial.",
+      "statusChangedAt": null
+    },
+    {
+      "id": "show-30",
+      "date": "30",
+      "month": "OUTUBRO",
+      "subtitle": "SÃO PAULO",
+      "url": "https://www.ticketmaster.com.br/",
+      "enabled": true,
+      "status": "sold_out",
+      "label": "Esgotado",
+      "details": "Nenhuma atualização confirmada no site oficial.",
+      "statusChangedAt": null
+    },
+    {
+      "id": "show-31",
+      "date": "31",
+      "month": "OUTUBRO",
+      "subtitle": "SÃO PAULO",
+      "url": "https://www.ticketmaster.com.br/",
+      "enabled": true,
+      "status": "sold_out",
+      "label": "Esgotado",
+      "details": "Nenhuma atualização confirmada no site oficial.",
+      "statusChangedAt": null
+    }
+  ],
+  "infoCards": [
+    {
+      "title": "LINKS OFICIAIS",
+      "text": "Use somente as páginas oficiais da Ticketmaster para consultar e comprar ingressos.",
+      "linkText": "VER DIAS DE SHOW →",
+      "linkUrl": "#shows"
+    },
+    {
+      "title": "ALERTA DE SOM",
+      "text": "Ative o áudio no cabeçalho para ouvir o aviso quando houver disponibilidade.",
+      "linkText": "",
+      "linkUrl": ""
+    },
+    {
+      "title": "BOT DE MONITORAMENTO",
+      "text": "Um único bot verifica as páginas oficiais. O site não faz F5 nem consultas repetidas.",
+      "linkText": "",
+      "linkUrl": ""
+    },
+    {
+      "title": "ATUALIZAÇÃO EM TEMPO REAL",
+      "text": "Os cards mudam somente quando o Supabase recebe um novo status do bot.",
+      "linkText": "",
+      "linkUrl": ""
+    },
+    {
+      "title": "CANAL TELEGRAM",
+      "text": "Acesse o canal do projeto para acompanhar avisos e atualizações importantes.",
+      "linkText": "ABRIR TELEGRAM →",
+      "linkUrl": "https://t.me/monitorticketmbts"
+    },
+    {
+      "title": "SEGURANÇA",
+      "text": "O monitor não solicita dados pessoais, não compra ingressos e não realiza pagamentos.",
+      "linkText": "",
+      "linkUrl": ""
+    },
+    {
+      "title": "FILA E RESERVA",
+      "text": "O sistema não entra na fila, não reserva lugares e não contorna proteções da Ticketmaster.",
+      "linkText": "",
+      "linkUrl": ""
+    }
+  ]
+}

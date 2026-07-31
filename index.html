@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#050505">
+  <meta name="description" content="Monitor independente de ingressos BTS em São Paulo.">
+  <title>Monitor Ticket BTS</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header class="site-header">
+    <button id="audioButton" class="header-pill alert-pill" type="button">
+      <span class="bell">🔔</span><span id="alertText">Ativar alerta</span>
+    </button>
+
+    <nav class="header-links" aria-label="Redes sociais">
+      <a id="xLink" class="header-pill icon-pill" href="#" target="_blank" rel="noopener" hidden>X</a>
+      <a id="instagramLink" class="header-pill" href="#" target="_blank" rel="noopener">INSTAGRAM</a>
+      <a id="telegramLink" class="header-pill" href="#" target="_blank" rel="noopener">CANAL TELEGRAM</a>
+    </nav>
+  </header>
+
+  <main>
+    <section id="hero" class="hero">
+      <div class="hero-overlay"></div>
+      <div class="hero-content">
+        <p id="siteSubtitle" class="hero-kicker">BTS WORLD TOUR ARIRANG - SÃO PAULO</p>
+        <h1 id="siteTitle">MONITOR TICKET BTS</h1>
+        <div class="countdown-card">
+          <span>PRÓXIMA VERIFICAÇÃO</span>
+          <strong id="countdown">60 SEGUNDOS</strong>
+        </div>
+      </div>
+    </section>
+
+    <section id="shows" class="shows-section">
+      <h2>DIAS DE SHOWS</h2>
+      <div id="showsGrid" class="shows-grid"></div>
+    </section>
+
+    <section id="manualNoticeSection" class="notice-wrap" hidden>
+      <div class="notice-card">
+        <strong>AVISO IMPORTANTE</strong>
+        <p id="manualNotice"></p>
+      </div>
+    </section>
+
+    <section class="info-section">
+      <h2>INFORMAÇÕES IMPORTANTES</h2>
+      <div id="infoGrid" class="info-grid"></div>
+    </section>
+  </main>
+
+  <footer id="footerText">BTS Ticket Monitor Brasil</footer>
+
+  <div id="availableModal" class="modal" hidden>
+    <div class="modal-card">
+      <div class="modal-icon">🔔</div>
+      <p class="modal-kicker">ALERTA DE INGRESSOS</p>
+      <h2>INGRESSOS DISPONÍVEIS!</h2>
+      <p id="availableMessage">Confirme agora na página oficial da Ticketmaster.</p>
+      <div class="modal-actions">
+        <a id="officialModalLink" href="#" target="_blank" rel="noopener">ABRIR TICKETMASTER</a>
+        <button id="closeModal" type="button">FECHAR</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="./config.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

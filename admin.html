@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Painel administrativo</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body class="admin-body">
+  <main class="admin-wrap">
+    <a class="back" href="./">← Voltar ao site</a>
+    <h1>Painel administrativo</h1>
+    <p class="muted">Edite o site e publique diretamente no Supabase.</p>
+
+    <section id="loginPanel" class="panel login-panel">
+      <h2>Entrar</h2>
+      <div class="form-grid">
+        <label>E-mail<input id="email" type="email" autocomplete="username"></label>
+        <label>Senha<input id="password" type="password" autocomplete="current-password"></label>
+      </div>
+      <div class="actions"><button id="loginButton" class="admin-button" type="button">Entrar</button></div>
+      <p id="loginMessage" class="admin-message"></p>
+    </section>
+
+    <div id="dashboard" hidden>
+      <div class="admin-session">
+        <span id="sessionEmail"></span>
+        <button id="logoutButton" class="admin-button gray" type="button">Sair</button>
+      </div>
+      <p id="adminMessage" class="admin-message"></p>
+
+      <section class="panel">
+        <h2>Capa e cabeçalho</h2>
+        <div class="form-grid">
+          <label>Mini título<input id="siteSubtitle"></label>
+          <label>Título principal<input id="siteTitle"></label>
+          <label>Texto do alerta<input id="headerAlertText"></label>
+          <label>Instagram<input id="instagramUrl" type="url"></label>
+          <label>X / Twitter<input id="xUrl" type="url"></label>
+          <label>Telegram<input id="telegramUrl" type="url"></label>
+          <label class="full">URL atual da capa<input id="coverImage" type="url"></label>
+          <label class="full">Escolher imagem da capa no computador
+            <input id="coverFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
+          </label>
+          <div class="full actions">
+            <button id="uploadCoverButton" class="admin-button gray" type="button">Enviar imagem da capa</button>
+          </div>
+          <p id="uploadCoverMessage" class="admin-message full"></p>
+          <img id="coverPreview" class="cover-preview full" alt="Prévia da capa" hidden>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Monitor e avisos</h2>
+        <div class="form-grid">
+          <label class="checkbox"><input id="monitorEnabled" type="checkbox">Monitor ligado</label>
+          <label>Intervalo em segundos<input id="checkIntervalSeconds" type="number" min="60" max="3600"></label>
+          <label class="full">Aviso manual<textarea id="manualNotice"></textarea></label>
+          <label class="full">Texto do rodapé<input id="footerTextInput"></label>
+        </div>
+        <div class="actions">
+          <button id="checkNow" class="admin-button" type="button">Verificar agora</button>
+          <button id="testAlert" class="admin-button gray" type="button">Testar alerta</button>
+        </div>
+        <div id="stateList" class="state-list"></div>
+      </section>
+
+      <section class="panel">
+        <div class="editor-head">
+          <h2>Dias de shows</h2>
+          <button id="addShow" class="admin-button gray" type="button">+ Adicionar</button>
+        </div>
+        <div id="showsEditor"></div>
+      </section>
+
+      <section class="panel">
+        <div class="editor-head">
+          <h2>Cards de informações</h2>
+          <button id="addInfo" class="admin-button gray" type="button">+ Adicionar</button>
+        </div>
+        <div id="infoEditor"></div>
+      </section>
+
+      <div class="save-bar">
+        <button id="saveButton" class="admin-button" type="button">Salvar e publicar alterações</button>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./config.js"></script>
+  <script src="./admin.js"></script>
+</body>
+</html>

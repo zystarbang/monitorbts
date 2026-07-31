@@ -1,0 +1,4 @@
+project_id = "hznejgtxdqaxnlarpzum"
+
+[functions.ticket-monitor]
+verify_jwt = false
