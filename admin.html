@@ -28,8 +28,6 @@
         <span id="sessionEmail"></span>
         <button id="logoutButton" class="admin-button gray" type="button">Sair</button>
       </div>
-      <div id="toastContainer" class="toast-container" aria-live="polite"></div>
-      <div id="saveStatus" class="save-status" hidden><span class="save-status-dot"></span><span id="saveStatusText">Alterações salvas</span></div>
       <p id="adminMessage" class="admin-message"></p>
 
       <section class="panel">
@@ -59,31 +57,12 @@
           <label class="checkbox"><input id="monitorEnabled" type="checkbox">Monitor ligado</label>
           <label>Intervalo em segundos<input id="checkIntervalSeconds" type="number" min="60" max="3600"></label>
           <label class="full">Aviso manual<textarea id="manualNotice"></textarea></label>
-          <label>Show usado no teste
-            <select id="testShowSelect"></select>
-          </label>
-          <label>Duração do teste
-            <select id="testDurationSelect">
-              <option value="30">30 segundos</option>
-              <option value="60" selected>1 minuto</option>
-              <option value="120">2 minutos</option>
-              <option value="300">5 minutos</option>
-            </select>
-          </label>
-          <label>Status do teste
-            <select id="testStatusSelect">
-              <option value="available">Disponível</option>
-              <option value="sold_out">Esgotado</option>
-            </select>
-          </label>
           <label class="full">Texto do rodapé<input id="footerTextInput"></label>
         </div>
         <div class="actions">
           <button id="checkNow" class="admin-button" type="button">Verificar agora</button>
-          <button id="testAlert" class="admin-button gray" type="button">Publicar teste temporário</button>
-          <button id="clearTestAlert" class="admin-button danger" type="button">Limpar teste</button>
+          <button id="testAlert" class="admin-button gray" type="button">Testar alerta</button>
         </div>
-        <div id="testControlCard" class="test-control-card"><div><strong id="testControlTitle">Nenhum teste ativo</strong><p id="testControlDescription">O teste não altera os status reais.</p></div><span id="testCountdownBadge" class="test-countdown-badge" hidden></span></div>
         <div id="stateList" class="state-list"></div>
       </section>
 
@@ -104,7 +83,7 @@
       </section>
 
       <div class="save-bar">
-        <button id="saveButton" class="admin-button save-main-button" type="button"><span class="button-label">Salvar e publicar alterações</span><span class="button-spinner" hidden></span></button>
+        <button id="saveButton" class="admin-button" type="button">Salvar e publicar alterações</button>
       </div>
     </div>
   </main>

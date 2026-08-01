@@ -37,23 +37,18 @@ function beep() {
   if (!Context) return;
   audioContext ||= new Context();
   if (audioContext.state === "suspended") audioContext.resume();
-  const start = audioContext.currentTime;
-  const osc = audioContext.createOscillator();
-  const gain = audioContext.createGain();
-  osc.type = "sawtooth";
-  osc.frequency.setValueAtTime(520, start);
-  osc.frequency.linearRampToValueAtTime(1120, start + .55);
-  osc.frequency.linearRampToValueAtTime(520, start + 1.1);
-  osc.frequency.linearRampToValueAtTime(1120, start + 1.65);
-  osc.frequency.linearRampToValueAtTime(520, start + 2.2);
-  gain.gain.setValueAtTime(.0001,start);
-  gain.gain.exponentialRampToValueAtTime(.3,start+.04);
-  gain.gain.exponentialRampToValueAtTime(.0001,start+2.4);
-  osc.connect(gain); gain.connect(audioContext.destination); osc.start(start); osc.stop(start+2.4);
-  [0.1,.7,1.3,1.9].forEach(offset=>{const p=audioContext.createOscillator(),g=audioContext.createGain();p.type="square";p.frequency.value=1450;g.gain.setValueAtTime(.0001,start+offset);g.gain.exponentialRampToValueAtTime(.16,start+offset+.015);g.gain.exponentialRampToValueAtTime(.0001,start+offset+.18);p.connect(g);g.connect(audioContext.destination);p.start(start+offset);p.stop(start+offset+.2)});
-  if ("vibrate" in navigator) navigator.vibrate([400,150,400,150,700]);
+  [0,.24,.48].forEach((offset,index)=>{
+    const osc=audioContext.createOscillator();
+    const gain=audioContext.createGain();
+    osc.frequency.value=index===1?960:730;
+    gain.gain.setValueAtTime(.0001,audioContext.currentTime+offset);
+    gain.gain.exponentialRampToValueAtTime(.22,audioContext.currentTime+offset+.02);
+    gain.gain.exponentialRampToValueAtTime(.0001,audioContext.currentTime+offset+.2);
+    osc.connect(gain);gain.connect(audioContext.destination);
+    osc.start(audioContext.currentTime+offset);osc.stop(audioContext.currentTime+offset+.23);
+  });
 }
-function startAlarm(){stopAlarm();beep();alarmInterval=setInterval(beep,3000)}
+function startAlarm(){stopAlarm();beep();alarmInterval=setInterval(beep,3500)}
 function stopAlarm(){if(alarmInterval)clearInterval(alarmInterval);alarmInterval=null}
 
 function render(data, firstLoad=false) {
@@ -81,17 +76,7 @@ function render(data, firstLoad=false) {
   $("#manualNoticeSection").hidden = !notice;
   $("#manualNotice").textContent = notice;
 
-  const testAlert = safe.testAlert && safe.testAlert.active && (!safe.testAlert.expiresAt || new Date(safe.testAlert.expiresAt).getTime() > Date.now()) ? safe.testAlert : null;
-  const shows = safe.shows
-    .filter(s => s.enabled !== false)
-    .map(s => testAlert && testAlert.showId === s.id ? {
-      ...s,
-      status: testAlert.status || "available",
-      label: testAlert.label || "Disponível",
-      details: testAlert.details || "Alerta de teste temporário.",
-      statusChangedAt: testAlert.startedAt || new Date().toISOString(),
-      __testMode: true
-    } : s);
+  const shows = safe.shows.filter(s => s.enabled !== false);
   $("#showsGrid").innerHTML = shows.map(show => `
     <article class="show-card status-${escapeHtml(show.status || "unknown")}">
       <div class="show-date-block">
@@ -102,7 +87,7 @@ function render(data, firstLoad=false) {
         </div>
       </div>
 
-      <p class="status-label">${show.__testMode ? "MODO DE TESTE — STATUS NÃO REAL" : "STATUS DO INGRESSO"}</p>
+      <p class="status-label">STATUS DO INGRESSO</p>
       <div class="status-bar">
         <span class="status-dot"></span>
         <span class="status-text">${escapeHtml(show.label || "Aguardando")}</span>
@@ -175,7 +160,6 @@ $("#audioButton").addEventListener("click", async ()=>{
 });
 $("#closeModal").addEventListener("click",()=>{$("#availableModal").hidden=true;stopAlarm()});
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)loadData(false)});
-try{const channel=new BroadcastChannel("bts-monitor");channel.addEventListener("message",()=>loadData(false));}catch{}
 $("#audioButton").classList.toggle("active",audioEnabled);
 render(cloneDefault(), true);
 loadData(true);

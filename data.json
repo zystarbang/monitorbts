@@ -18,7 +18,7 @@
       "date": "28",
       "month": "OUTUBRO",
       "subtitle": "SÃO PAULO",
-      "url": "https://www.ticketmaster.com.br/",
+      "url": "https://www.ticketmaster.com.br/event/venda-geral-bts-world-tour-arirang-28-10",
       "enabled": true,
       "status": "sold_out",
       "label": "Esgotado",
@@ -30,7 +30,7 @@
       "date": "30",
       "month": "OUTUBRO",
       "subtitle": "SÃO PAULO",
-      "url": "https://www.ticketmaster.com.br/",
+      "url": "https://www.ticketmaster.com.br/event/venda-geral-bts-world-tour-arirang-30-10",
       "enabled": true,
       "status": "sold_out",
       "label": "Esgotado",
@@ -42,7 +42,7 @@
       "date": "31",
       "month": "OUTUBRO",
       "subtitle": "SÃO PAULO",
-      "url": "https://www.ticketmaster.com.br/",
+      "url": "https://www.ticketmaster.com.br/event/venda-geral-bts-world-tour-arirang-31-10",
       "enabled": true,
       "status": "sold_out",
       "label": "Esgotado",
@@ -93,5 +93,13 @@
       "linkText": "",
       "linkUrl": ""
     }
-  ]
+  ],
+  "testAlert": {
+    "active": false,
+    "showId": "",
+    "status": "available",
+    "label": "Disponível",
+    "details": "Alerta de teste temporário.",
+    "startedAt": null
+  }
 }
