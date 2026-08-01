@@ -276,6 +276,11 @@ Deno.serve(async (request: Request) => {
     );
   }
 
+  await serviceClient.from("monitor_updates").insert({
+    event_type: "monitor_status_changed",
+    payload: updated,
+  });
+
   return new Response(
     JSON.stringify({
       ok: true,

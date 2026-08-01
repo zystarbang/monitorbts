@@ -6,7 +6,9 @@ let previousStatuses = JSON.parse(sessionStorage.getItem("monitor-statuses") || 
 let audioEnabled = localStorage.getItem("monitor-audio") === "true";
 let audioContext = null;
 let alarmInterval = null;
-let nextRefreshAt = Date.now() + 60000;
+let nextRefreshAt = Date.now() + 15000;
+let currentData = null;
+let realtimeClient = null;
 
 function cloneDefault() {
   return JSON.parse(JSON.stringify(cfg.DEFAULT_DATA));
@@ -20,8 +22,7 @@ function publicFileUrl() {
   const base = cfg.SUPABASE_URL.replace(/\/$/, "");
   const bucket = encodeURIComponent(cfg.PUBLIC_BUCKET);
   const file = cfg.PUBLIC_FILE.split("/").map(encodeURIComponent).join("/");
-  const minute = Math.floor(Date.now() / 60000);
-  return `${base}/storage/v1/object/public/${bucket}/${file}?v=${minute}`;
+  return `${base}/storage/v1/object/public/${bucket}/${file}?v=${Date.now()}`;
 }
 function formatDate(value) {
   if (!value) return "—";
@@ -37,21 +38,27 @@ function beep() {
   if (!Context) return;
   audioContext ||= new Context();
   if (audioContext.state === "suspended") audioContext.resume();
-  [0,.24,.48].forEach((offset,index)=>{
-    const osc=audioContext.createOscillator();
-    const gain=audioContext.createGain();
-    osc.frequency.value=index===1?960:730;
-    gain.gain.setValueAtTime(.0001,audioContext.currentTime+offset);
-    gain.gain.exponentialRampToValueAtTime(.22,audioContext.currentTime+offset+.02);
-    gain.gain.exponentialRampToValueAtTime(.0001,audioContext.currentTime+offset+.2);
-    osc.connect(gain);gain.connect(audioContext.destination);
-    osc.start(audioContext.currentTime+offset);osc.stop(audioContext.currentTime+offset+.23);
-  });
+  const start = audioContext.currentTime;
+  const osc = audioContext.createOscillator();
+  const gain = audioContext.createGain();
+  osc.type = "sawtooth";
+  osc.frequency.setValueAtTime(520, start);
+  osc.frequency.linearRampToValueAtTime(1120, start + .55);
+  osc.frequency.linearRampToValueAtTime(520, start + 1.1);
+  osc.frequency.linearRampToValueAtTime(1120, start + 1.65);
+  osc.frequency.linearRampToValueAtTime(520, start + 2.2);
+  gain.gain.setValueAtTime(.0001,start);
+  gain.gain.exponentialRampToValueAtTime(.3,start+.04);
+  gain.gain.exponentialRampToValueAtTime(.0001,start+2.4);
+  osc.connect(gain); gain.connect(audioContext.destination); osc.start(start); osc.stop(start+2.4);
+  [0.1,.7,1.3,1.9].forEach(offset=>{const p=audioContext.createOscillator(),g=audioContext.createGain();p.type="square";p.frequency.value=1450;g.gain.setValueAtTime(.0001,start+offset);g.gain.exponentialRampToValueAtTime(.16,start+offset+.015);g.gain.exponentialRampToValueAtTime(.0001,start+offset+.18);p.connect(g);g.connect(audioContext.destination);p.start(start+offset);p.stop(start+offset+.2)});
+  if ("vibrate" in navigator) navigator.vibrate([400,150,400,150,700]);
 }
-function startAlarm(){stopAlarm();beep();alarmInterval=setInterval(beep,3500)}
+function startAlarm(){stopAlarm();beep();alarmInterval=setInterval(beep,3000)}
 function stopAlarm(){if(alarmInterval)clearInterval(alarmInterval);alarmInterval=null}
 
 function render(data, firstLoad=false) {
+  currentData = data;
   const safe = {...cloneDefault(), ...data};
   safe.shows = Array.isArray(data?.shows) && data.shows.length ? data.shows : cloneDefault().shows;
   safe.infoCards = Array.isArray(data?.infoCards) && data.infoCards.length ? data.infoCards : cloneDefault().infoCards;
@@ -76,7 +83,17 @@ function render(data, firstLoad=false) {
   $("#manualNoticeSection").hidden = !notice;
   $("#manualNotice").textContent = notice;
 
-  const shows = safe.shows.filter(s => s.enabled !== false);
+  const testAlert = safe.testAlert && safe.testAlert.active && (!safe.testAlert.expiresAt || new Date(safe.testAlert.expiresAt).getTime() > Date.now()) ? safe.testAlert : null;
+  const shows = safe.shows
+    .filter(s => s.enabled !== false)
+    .map(s => testAlert && testAlert.showId === s.id ? {
+      ...s,
+      status: testAlert.status || "available",
+      label: testAlert.label || "Disponível",
+      details: testAlert.details || "Alerta de teste temporário.",
+      statusChangedAt: testAlert.startedAt || new Date().toISOString(),
+      __testMode: true
+    } : s);
   $("#showsGrid").innerHTML = shows.map(show => `
     <article class="show-card status-${escapeHtml(show.status || "unknown")}">
       <div class="show-date-block">
@@ -87,7 +104,7 @@ function render(data, firstLoad=false) {
         </div>
       </div>
 
-      <p class="status-label">STATUS DO INGRESSO</p>
+      <p class="status-label">${show.__testMode ? "MODO DE TESTE — STATUS NÃO REAL" : "STATUS DO INGRESSO"}</p>
       <div class="status-bar">
         <span class="status-dot"></span>
         <span class="status-text">${escapeHtml(show.label || "Aguardando")}</span>
@@ -135,14 +152,14 @@ function render(data, firstLoad=false) {
 async function loadData(firstLoad=false) {
   if (document.hidden && !firstLoad) return;
   try {
-    const response = await fetch(publicFileUrl(), {cache:"default",headers:{Accept:"application/json"}});
+    const response = await fetch(publicFileUrl(), {cache:"no-store",headers:{Accept:"application/json","Cache-Control":"no-cache"}});
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     render(await response.json(), firstLoad);
   } catch (error) {
     console.warn("data.json indisponível; usando conteúdo padrão.", error);
     render(cloneDefault(), firstLoad);
   } finally {
-    nextRefreshAt = Date.now() + Math.max(60, Number(cfg.REFRESH_SECONDS || 60))*1000;
+    nextRefreshAt = Date.now() + 15000;
   }
 }
 function updateCountdown() {
@@ -160,8 +177,23 @@ $("#audioButton").addEventListener("click", async ()=>{
 });
 $("#closeModal").addEventListener("click",()=>{$("#availableModal").hidden=true;stopAlarm()});
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)loadData(false)});
+try{const channel=new BroadcastChannel("bts-monitor");channel.addEventListener("message",event=>{if(event.data?.payload)render(event.data.payload,false);else loadData(false)});}catch{}
+
+function startRealtime(){
+  if(!window.supabase?.createClient) return;
+  realtimeClient=window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
+  realtimeClient.channel("monitor-public-updates")
+    .on("postgres_changes",{event:"INSERT",schema:"public",table:"monitor_updates"},payload=>{
+      const fresh=payload.new?.payload;
+      if(fresh&&typeof fresh==="object") render(fresh,false);
+      else loadData(false);
+    })
+    .subscribe();
+}
+
 $("#audioButton").classList.toggle("active",audioEnabled);
 render(cloneDefault(), true);
 loadData(true);
-setInterval(()=>loadData(false),Math.max(60,Number(cfg.REFRESH_SECONDS||60))*1000);
+startRealtime();
+setInterval(()=>loadData(false),15000);
 setInterval(updateCountdown,1000);
